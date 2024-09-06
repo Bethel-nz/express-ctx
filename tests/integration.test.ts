@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import express, { Express } from 'express';
 import request from 'supertest';
-import { contextMiddleware, MyContext } from '../src/index';
+import { contextMiddleware, MyContext } from '../src/context-middleware';
 
 describe('Integration tests', () => {
   let app: Express;
@@ -10,14 +10,15 @@ describe('Integration tests', () => {
 
   beforeAll(() => {
     app = express();
-    const defaultCtx = new MyContext({
-      defaultValues: {
-        appName: 'TestApp',
-        version: '1.0.0',
-      },
-    });
 
-    app.use(contextMiddleware(defaultCtx));
+    app.use(
+      contextMiddleware({
+        defaultValues: {
+          appName: 'TestApp',
+          version: '1.0.0',
+        },
+      })
+    );
 
     app.get('/', (req, res) => {
       const appName = req.context.get('appName');

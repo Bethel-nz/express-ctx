@@ -4,8 +4,7 @@ import { Request, Response, NextFunction } from 'express';
 
 describe('contextMiddleware', () => {
   it('should attach context to request', () => {
-    const defaultCtx = new MyContext();
-    const middleware = contextMiddleware(defaultCtx);
+    const middleware = contextMiddleware();
 
     const req = {} as Request;
     const res = {} as Response;
@@ -15,13 +14,13 @@ describe('contextMiddleware', () => {
 
     expect(req.context).toBeDefined();
     expect(req.context).toBeInstanceOf(MyContext);
-    expect(req.context).toBe(defaultCtx); // Should be the same instance
+    expect(req.context).toBe(new MyContext()); // Should be the same instance
     expect(next).toHaveBeenCalled();
   });
 
   it('should make context available via getContext()', () => {
     const defaultCtx = new MyContext();
-    const middleware = contextMiddleware(defaultCtx);
+    const middleware = contextMiddleware();
 
     const req = {} as Request;
     const res = {} as Response;
