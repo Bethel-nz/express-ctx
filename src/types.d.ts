@@ -4,8 +4,11 @@ export type AllowedValueTypes =
   | boolean
   | Date
   | null
-  | undefined
-  | Record<string, unknown>;
+  | AllowdObject;
+
+interface AllowdObject {
+  [key: string]: AllowedValueTypes;
+}
 
 export interface MyContextOptions<T extends Record<string, AllowedValueTypes>> {
   expiry?: number;
