@@ -116,13 +116,11 @@ The `MyContext` class is the core of the package, managing the context data acro
 const ctx = new MyContext({
   defaultValues: { userId: null, last_login: new Date() }, // Optional default values for context keys
   expiry: 3600000, // Optional: Time in milliseconds for context data to expire
-  lazy: true, // Optional: Initializes context lazily, defaults to true
 });
 ```
 
 - **`defaultValues`**: Sets initial values for keys in the context.
 - **`expiry`**: Defines an expiration time for the context data. After the specified duration, the data is cleared automatically.
-- **`lazy`**: If set to `true`, the context initializes only when accessed, which optimizes resource usage.
 
 #### Methods
 
