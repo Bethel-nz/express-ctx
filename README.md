@@ -1,6 +1,6 @@
-# My Express Context
+# Express Context
 
-A flexible and powerful Express middleware for managing context data across requests, allowing you to maintain request-scoped data without altering function signatures. This is particularly useful for sharing data such as user sessions, configurations, or any request-specific information throughout your application.
+A flexible and powerful Express middleware for managing context data across requests, allowing you to maintain request-scoped data without altering function signatures. It stores each context based on the user's session, enabling you to pass around values specific to a user.
 
 ## Features
 
@@ -8,6 +8,11 @@ A flexible and powerful Express middleware for managing context data across requ
 - **Hooks**: Attach hooks for monitoring actions like get, set, and errors.
 - **Global Expiry**: Automatically clear data after a specified time.
 - **Ease of Use**: Integrate seamlessly with Express without modifying function signatures.
+- **Session-Based Storage**: Automatically stores context data based on user sessions.
+- **Authorization Key Fallback**: Uses authorization keys when session IDs are not available.
+- **Automatic Session Management**: Reuses existing context if a session ID is still active.
+- **Concurrent Request Support**: Handles multiple concurrent requests with isolated contexts.
+- **TypeScript Support**: Full TypeScript support for enhanced developer experience.
 
 ## Installation
 
@@ -188,6 +193,8 @@ ctx.set('userId', '12345'); // Logs: Value set: userId = 12345
 ### Testing the Context
 
 Testing involves both unit tests for individual components and integration tests for the entire flow in an Express application. The `vi` testing framework, alongside tools like `supertest`, can validate that your context behaves as expected.
+
+- Note: The test cases are written by claude
 
 #### Unit Testing Example
 
