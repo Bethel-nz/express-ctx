@@ -1,7 +1,3 @@
-import {
-  contextMiddleware,
-  MyContext,
-  getContext,
-} from './src/context-middleware';
+import { contextMiddleware, getContext } from './src/context-middleware';
 
-export { contextMiddleware, MyContext, getContext };
+export { contextMiddleware, getContext };
