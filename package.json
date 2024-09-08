@@ -1,5 +1,5 @@
 {
-  "name": "@bethel-nz/express-ctx",
+  "name": "@ren/express-ctx",
   "version": "1.0.0",
   "description": "A flexible context management library for Express applications",
   "main": "dist/index.js",
@@ -9,7 +9,7 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "prepublish": "npm run build",
-    "pub": "tsc && npm publish",
+    "pub": "tsc && npm publish --access public",
     "patch": "tsc && npm version patch && npm publish",
     "example": "ts-node example/app.ts",
     "lint": "eslint . --ext .ts",
