@@ -1,5 +1,9 @@
 # Express Context
 
+[![npm version](https://badge.fury.io/js/express-ctx.svg)](https://badge.fury.io/js/express-ctx)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![TypeScript](https://img.shields.io/badge/TypeScript-4.0%2B-blue)](https://www.typescriptlang.org/)
+
 A flexible Express middleware for managing context data across requests, allowing you to maintain request-scoped data without altering function signatures. It stores each context based on the user's session, enabling you to pass around values specific to a user.
 
 ## Features
@@ -19,37 +23,45 @@ A flexible Express middleware for managing context data across requests, allowin
 Install the package using npm:
 
 ```bash
-npm install my-ctx
+npm install express-ctx
 ```
 
 ## Usage
 
-### 1. Create a `MyContext` Instance
-
-Initialize a `MyContext` instance with optional default values:
+### 1. Import the context middleware
 
 ```typescript
-import { MyContext } from 'my-ctx';
-
-// Create an instance with optional default values and global expiry
-const ctx = new MyContext({
-  defaultValues: { userId: null, theme: 'light', lastLogin: new Date() },
-  expiry: 3600000, // Optional: 1 hour global expiry
-});
+import { contextMiddleware } from 'express-ctx';
 ```
 
-### 2. Use `contextMiddleware` in Express
+### 2. Intitialize the middleware with optional default values
 
-Attach the context to each request using the `contextMiddleware` function:
+```typescript
+import { contextMiddleware } from 'express-ctx';
+import express from 'express';
+
+const app = express();
+
+// use with express with optional default values and global expiry
+app.use(
+  contextMiddleware({
+    defaultValues: { userId: null, theme: 'light', lastLogin: new Date() },
+    expiry: 3600000, // Optional: 1 hour global expiry
+  })
+);
+```
+
+### 3. Use `contextMiddleware` in Express
+
+Attach the context to each request using `contextMiddleware` function:
 
 ```typescript
 import express from 'express';
-import { contextMiddleware } from 'my-ctx';
+import { contextMiddleware } from 'express-ctx';
 
 const app = express();
-const ctx = new MyContext(); // Initialize your context instance
 
-app.use(contextMiddleware(ctx));
+app.use(contextMiddleware());
 
 // Middleware to set user info in context (e.g., after authentication)
 app.use((req, res, next) => {
@@ -60,7 +72,7 @@ app.use((req, res, next) => {
 });
 ```
 
-### 3. Access Context Data
+### 4. Access Context Data
 
 You can access the context data in your route handlers or other middleware:
 
@@ -74,7 +86,7 @@ app.get('/dashboard', (req, res) => {
 });
 ```
 
-### 4. Adding Hooks
+### 5. Adding Hooks
 
 Hooks can be used to trigger custom behavior during context operations:
 
@@ -88,7 +100,7 @@ ctx.hook('onError', (error) => {
 });
 ```
 
-### 5. Clearing Context Data
+### 6. Clearing Context Data
 
 You can clear specific keys or all data stored in the context:
 
@@ -101,7 +113,7 @@ app.post('/logout', (req, res) => {
 });
 
 // Clear all keys
-ctx.clear(); // Use clear('*') for clearing all keys
+req.context.clear('*'); // Use clear('*') and clear() or clear(key) for clearing all keys or pass a key to clear a specific one
 ```
 
 ## Helpers and API
@@ -113,7 +125,7 @@ The `MyContext` class is the core of the package, managing the context data acro
 #### Constructor
 
 ```typescript
-const ctx = new MyContext({
+new MyContext({
   defaultValues: { userId: null, last_login: new Date() }, // Optional default values for context keys
   expiry: 3600000, // Optional: Time in milliseconds for context data to expire
 });
@@ -124,32 +136,31 @@ const ctx = new MyContext({
 
 #### Methods
 
-- **`set(key: string, value: any)`**:  
+- **`set(key: string, value: any)`**:
   Sets a value in the context. If hooks are attached to `afterSet`, they are triggered post-setting. This function can be used to store data relevant to the current request, like user roles or settings.
 
-- **`get(key: string): any`**:  
+- **`get(key: string): any`**:
   Retrieves a value from the context. If the key does not exist, it returns the default value specified during context initialization. This is useful when fetching user-specific data or application settings.
 
-- **`clear()`**:  
+- **`clear(key: string) or clear('*')`**:
   Clears all data stored in the context and triggers any attached `onClear` hooks. This is useful for resetting the context between requests or manually clearing data to free up resources.
 
-- **`hook(event: string, fn: Function)`**:  
-  Allows attaching a function to specific lifecycle events of the context. Events can include `beforeGet`, `afterSet`, and `onClear`, providing points to execute custom logic at various stages.
+- **`hook(event: string, fn: Function)`**:
+  Allows attaching a function to specific lifecycle events of the context. Events can include `beforeGet`, `onSet`, `afterSet`, `onClear` and `onError`, providing points to execute custom logic at various stages.
 
 ### `contextMiddleware`
 
-The `contextMiddleware` function attaches the `MyContext` instance to each request in the Express application. This middleware ensures that each request has access to a unique context instance.
+The `contextMiddleware` function recieves an optional config object and attaches it to each request in the Express application. This middleware ensures that each request has access to a unique context instance.
 
 #### Usage Example
 
 ```typescript
 import express from 'express';
-import { contextMiddleware, MyContext } from 'my-ctx';
+import { contextMiddleware } from 'express-ctx';
 
 const app = express();
-const ctx = new MyContext();
 
-app.use(contextMiddleware(ctx)); // Attaches context to each request
+app.use(contextMiddleware()); // Attaches context to each request
 ```
 
 ### `getContext()`
@@ -159,7 +170,7 @@ The `getContext` helper function retrieves the current context within the reques
 #### Usage Example: getContext()
 
 ```typescript
-import { getContext } from 'my-ctx';
+import { getContext } from 'express-ctx';
 
 function someHelperFunction() {
   const ctx = getContext();
@@ -175,7 +186,7 @@ function someHelperFunction() {
 Hooks provide additional control by letting you respond to changes within the context. Here's an example showing how to use hooks:
 
 ```typescript
-const ctx = new MyContext();
+const ctx = getContext();
 
 ctx.hook('afterSet', (key, value) => {
   console.log(`Value set: ${key} = ${value}`);
@@ -184,9 +195,11 @@ ctx.hook('afterSet', (key, value) => {
 ctx.set('userId', '12345'); // Logs: Value set: userId = 12345
 ```
 
-- **`afterSet` Hook**: Triggered every time a value is set in the context, allowing for post-processing or logging.
 - **`beforeGet` Hook**: Can be used to validate or modify retrieval behavior before returning a value.
+- **`onSet` Hook**: Triggered every time a value is set in the context, allowing for post-processing or logging.
+- **`afterSet` Hook**: Triggered every time a value is set in the context, allowing for post-processing or logging.
 - **`onClear` Hook**: Triggered when the context is cleared, enabling cleanup operations.
+- **`onError` Hook**: Triggered when an error occurs in the context, allowing for error handling or logging.
 
 ### Testing the Context
 
@@ -200,12 +213,11 @@ Testing involves both unit tests for individual components and integration tests
 // Unit test for contextMiddleware
 import { vi, describe, it, expect } from 'vitest';
 import { Request, Response, NextFunction } from 'express';
-import { MyContext, contextMiddleware } from 'my-ctx';
+import { contextMiddleware } from 'express-ctx';
 
 describe('contextMiddleware', () => {
   it('should attach context to request', () => {
-    const ctx = new MyContext();
-    const middleware = contextMiddleware(ctx);
+    const middleware = contextMiddleware();
 
     const req = {} as Request;
     const res = {} as Response;
@@ -225,14 +237,13 @@ describe('contextMiddleware', () => {
 // Integration test to verify context data persistence
 import express from 'express';
 import request from 'supertest';
-import { MyContext, contextMiddleware } from 'my-ctx';
+import { contextMiddleware } from 'express-ctx';
 
-describe('MyContext Integration', () => {
+describe('Context Integration', () => {
   it('should maintain context across middleware', async () => {
     const app = express();
-    const ctx = new MyContext();
 
-    app.use(contextMiddleware(ctx));
+    app.use(contextMiddleware());
 
     app.use((req, res, next) => {
       req.context.set('userId', '12345');
@@ -249,3 +260,41 @@ describe('MyContext Integration', () => {
   });
 });
 ```
+
+## Performance Considerations and Limitations
+
+While Express Context is designed to be efficient, there are some considerations to keep in mind:
+
+1. **Memory Usage**: The middleware stores context data in memory. For applications with a large number of concurrent users or sessions, monitor your application's memory usage to ensure it stays within acceptable limits.
+
+2. **Data Accuracy**: In certain scenarios, there's a possibility that context data might become stale or inaccurate. This can happen if:
+
+   - The session expires but the user continues to make requests.
+   - There are race conditions in highly concurrent environments.
+
+   To mitigate these issues:
+
+   - Implement proper session management and regularly validate session data.
+   - Use appropriate locking mechanisms or atomic operations when updating shared context data.
+   - Consider using a distributed cache or database for storing context data in large-scale applications.
+
+We're open to suggestions and contributions to improve the reliability and scalability of Express Context. If you have ideas or encounter specific issues, please open an issue or submit a pull request on our GitHub repository.
+
+## Troubleshooting and FAQ
+
+1. **Q: Why is my context data not persisting across requests?**
+   A: Ensure that you're using the same session ID or authorization token for all requests. Check if your session management is working correctly.
+
+2. **Q: How can I debug context-related issues?**
+   A: Use the `beforeGet` and `afterSet` hooks to log context operations. You can also use the `onError` hook to catch and log any errors occurring within the context operations.
+
+3. **Q: Is it safe to store sensitive information in the context?**
+   A: While the context is isolated per session, it's generally not recommended to store highly sensitive information (like passwords) in the context. Use it for session-specific, non-sensitive data.
+
+4. **Q: How can I extend the functionality of Express Context?**
+   A: You can extend the `MyContext` class or create wrapper functions around the existing methods to add custom behavior. Make sure to thoroughly test any extensions to ensure they don't introduce bugs or performance issues.
+
+5. **Q: What should I do if I encounter race conditions when updating context data?**
+   A: Implement proper locking mechanisms or use atomic update operations. Consider using a database or a distributed cache for storing context data in high-concurrency scenarios.
+
+If you encounter any other issues or have questions not covered here, please check our GitHub issues page or open a new issue for support.
