@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
-import MyContext from '../src/myctx';
+import MyContext from '../src/ctx';
 
 describe('MyContext', () => {
   it('should set and get values', () => {
