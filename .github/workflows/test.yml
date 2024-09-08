@@ -1,9 +1,9 @@
-name: Build and Lint Code
+name: Run Tests On Code
 
 on:
   push:
     branches:
-      - dev
+      - main
 
 jobs:
   lint:
