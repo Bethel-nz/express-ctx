@@ -13,7 +13,6 @@ import { AllowedValueTypes, MyContextOptions } from './types';
  *     lastLogin: new Date()
  *   },
  *   expiry: 3600000, // 1 hour global expiry
- *   lazy: false // Allow modifications
  * });
  *
  * // Set values
