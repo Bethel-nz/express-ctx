@@ -13,5 +13,4 @@ interface AllowdObject {
 export interface MyContextOptions<T extends Record<string, AllowedValueTypes>> {
   expiry?: number;
   defaultValues?: T;
-  lazy?: boolean;
 }
