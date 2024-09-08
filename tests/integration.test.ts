@@ -1,12 +1,13 @@
 import { describe, it, expect, beforeAll, afterAll, vi } from 'vitest';
-import express from 'express';
+import express, { Express } from 'express';
 import request from 'supertest';
-import { contextMiddleware, getContext, MyContext } from '../index';
+import { contextMiddleware, getContext } from '../src/context-middleware';
+import MyContext from '../src/ctx';
 import { AllowedValueTypes } from '../src/types';
 
 describe('Integration tests', () => {
-  let app: express.Application;
-  let server: any;
+  let app: Express;
+  let server: ReturnType<Express['listen']>;
 
   beforeAll(() => {
     app = express();

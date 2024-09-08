@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { contextMiddleware, MyContext, getContext } from '../index';
+import { contextMiddleware, getContext } from '../index';
+import MyContext from '../src/ctx';
 import { Request, Response, NextFunction } from 'express';
 
 describe('contextMiddleware', () => {
