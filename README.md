@@ -1,6 +1,6 @@
 # Express Context
 
-A flexible and powerful Express middleware for managing context data across requests, allowing you to maintain request-scoped data without altering function signatures. It stores each context based on the user's session, enabling you to pass around values specific to a user.
+A flexible Express middleware for managing context data across requests, allowing you to maintain request-scoped data without altering function signatures. It stores each context based on the user's session, enabling you to pass around values specific to a user.
 
 ## Features
 
