@@ -8,7 +8,9 @@
     "build": "tsc",
     "test": "vitest run",
     "test:watch": "vitest",
-    "prepublishOnly": "npm run build",
+    "prepublish": "npm run build",
+    "pub": "tsc && npm publish",
+    "patch": "tsc && npm version patch && npm publish",
     "example": "ts-node src/example/app.ts"
   },
   "keywords": [
@@ -22,12 +24,12 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/Bethel-nz/my-ctx.git"
+    "url": "https://github.com/Bethel-nz/express-ctx.git"
   },
   "bugs": {
-    "url": "https://github.com/Bethel-nz/my-ctx/issues"
+    "url": "https://github.com/Bethel-nz/express-ctx/issues"
   },
-  "homepage": "https://github.com/Bethel-nz/my-ctx#readme",
+  "homepage": "https://github.com/Bethel-nz/express-ctx#readme",
   "peerDependencies": {
     "express": "^4.17.1"
   },
