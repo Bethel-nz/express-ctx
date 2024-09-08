@@ -1,16 +1,12 @@
-export type AllowedValueTypes =
-  | string
-  | number
-  | boolean
-  | Date
-  | null
-  | AllowdObject;
+export type AllowedValueTypes = baseType | AllowedObject | AllowedValueTypes[];
 
-interface AllowdObject {
-  [key: string]: AllowedValueTypes;
-}
+type baseType = string | number | boolean | Date | null | any;
 
-export interface MyContextOptions<T extends Record<string, AllowedValueTypes>> {
+export type AllowedObject = Record<string, baseType>;
+
+export type AllowedValueTypesRecord = Record<string, AllowedValueTypes>;
+
+export interface MyContextOptions<T extends AllowedValueTypesRecord> {
   expiry?: number;
   defaultValues?: T;
 }
