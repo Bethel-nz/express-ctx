@@ -1,6 +1,7 @@
 export type AllowedValueTypes = baseType | AllowedObject | AllowedValueTypes[];
 
-type baseType = string | number | boolean | Date | null | any;
+//eslint-disable-next-line
+export type baseType = string | number | boolean | Date | null | any;
 
 export type AllowedObject = Record<string, baseType>;
 

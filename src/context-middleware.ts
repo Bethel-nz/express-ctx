@@ -1,10 +1,14 @@
 import { Request, Response, NextFunction } from 'express';
 import { AsyncLocalStorage } from 'async_hooks';
 import MyContext from './ctx';
-import { AllowedValueTypes, AllowedValueTypesRecord, MyContextOptions } from './types';
+import {
+  AllowedValueTypes,
+  AllowedValueTypesRecord,
+  MyContextOptions,
+} from './types';
 
-const asyncLocalStorage = new AsyncLocalStorage<MyContext<any>>();
-const contextStore = new Map<string, MyContext<any>>();
+const asyncLocalStorage = new AsyncLocalStorage<MyContext<AllowedValueTypes>>();
+const contextStore = new Map<string, MyContext<AllowedValueTypesRecord>>();
 
 declare global {
   namespace Express {

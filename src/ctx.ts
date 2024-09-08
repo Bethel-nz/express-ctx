@@ -54,13 +54,24 @@ import { AllowedValueTypes, MyContextOptions } from './types';
  *   console.error('Context error:', error);
  * });
  *
+ * // Clear specific keys
+ * app.post('/logout', (req, res) => {
+ *   req.context.clear('sessionToken');
+ *   res.send('Logged out');
+ * });
+ *
  * // Using getContext() helper in utility functions
  * function someHelperFunction() {
  *   const ctx = getContext();
  *   if (ctx) {
  *     const userId = ctx.get('userId');
- *     // Perform read-only operations with userId
- *     // Note: ctx from getContext() should not be used to modify the context
+ *     // Perform operations with userId
+ *
+ *     // Clear a specific key
+ *     ctx.clear('userId');
+ *
+ *     // Or clear all keys
+ *     ctx.clear();
  *   }
  * }
  *
@@ -91,11 +102,11 @@ import { AllowedValueTypes, MyContextOptions } from './types';
 class MyContext<T extends Record<string, AllowedValueTypes>> {
   private storage: Map<string, { value: AllowedValueTypes; expiry?: number }>;
   private hooks: {
-    beforeGet: Function[];
-    afterSet: Function[];
-    onClear: Function[];
-    onSet: Function[];
-    onError: Function[];
+    beforeGet: ((key: string) => void)[];
+    afterSet: ((key: string, value: AllowedValueTypes) => void)[];
+    onClear: ((key?: string) => void)[];
+    onSet: ((key: string, value: AllowedValueTypes) => void)[];
+    onError: ((error: Error) => void)[];
   };
   private defaultValues: T;
   private globalExpiry?: number;
@@ -113,43 +124,57 @@ class MyContext<T extends Record<string, AllowedValueTypes>> {
     this.globalExpiry = options.expiry;
   }
 
-  hook(event: keyof typeof this.hooks, fn: Function) {
-    this.hooks[event].push(fn);
+  hook<E extends keyof typeof this.hooks>(
+    event: E,
+    fn: (...args: Parameters<(typeof this.hooks)[E][number]>) => void
+  ) {
+    //eslint-disable-next-line
+    this.hooks[event].push(fn as any);
   }
 
-  private triggerHooks(event: keyof typeof this.hooks, ...args: any[]) {
+  private triggerHooks<E extends keyof typeof this.hooks>(
+    event: E,
+    ...args: Parameters<(typeof this.hooks)[E][number]>
+  ) {
     if (this.hooks[event]) {
       for (const hook of this.hooks[event]) {
         try {
-          hook(...args);
+          //eslint-disable-next-line
+          (hook as (...args: any[]) => void)(...args);
         } catch (error) {
+           
           console.error(`Error in ${event} hook:`, error);
-          this.triggerHooks('onError', error);
+          this.triggerHooks(
+            'onError',
+            error instanceof Error ? error : new Error(String(error))
+          );
         }
       }
     }
   }
 
-  set(key: string | symbol, value: any | AllowedValueTypes, ttl?: number) {
+  set(key: string | symbol, value: AllowedValueTypes, ttl?: number) {
     try {
       if (!value) return;
       const expiry = ttl ?? this.globalExpiry;
-      this.storage.set(key.toString(), { value, expiry });
-      this.triggerHooks('afterSet', key, value);
-      this.triggerHooks('onSet', key, value);
+      const stringKey = key.toString();
+      this.storage.set(stringKey, { value, expiry });
+      this.triggerHooks('afterSet', stringKey, value);
+      this.triggerHooks('onSet', stringKey, value);
       if (expiry) {
         setTimeout(() => {
-          this.clearKey(key);
+          this.clearKey(stringKey);
         }, expiry);
       }
-    } catch (error) {
+      //eslint-disable-next-line
+    } catch (error: any | Error) {
       this.triggerHooks('onError', error);
     }
   }
 
   get<K extends keyof T>(key: K): T[K] | undefined {
     try {
-      this.triggerHooks('beforeGet', key);
+      this.triggerHooks('beforeGet', key as string);
       const item = this.storage.get(key.toString());
       if (item) {
         return item.value as T[K];
@@ -159,8 +184,9 @@ class MyContext<T extends Record<string, AllowedValueTypes>> {
       }
       throw new Error(`Key "${String(key)}" not found in context`);
     } catch (error) {
-      this.triggerHooks('onError', () =>
-        console.error(`Error in get: ${error}`)
+      this.triggerHooks(
+        'onError',
+        error instanceof Error ? error : new Error(String(error))
       );
       return undefined;
     }
@@ -178,7 +204,7 @@ class MyContext<T extends Record<string, AllowedValueTypes>> {
   private clearKey(key: string | symbol) {
     if (this.storage.has(key.toString())) {
       this.storage.delete(key.toString());
-      this.triggerHooks('onClear', key);
+      this.triggerHooks('onClear', key as string);
     }
   }
 }

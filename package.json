@@ -13,7 +13,7 @@
     "patch": "tsc && npm version patch && npm publish",
     "example": "ts-node example/app.ts",
     "lint": "eslint . --ext .ts",
-    "lint:fix": "eslint . --ext .ts --fix"
+    "lint:fix": "eslint . --fix"
   },
   "keywords": [
     "express",
@@ -54,5 +54,6 @@
   ],
   "engines": {
     "node": ">=14.0.0"
-  }
+  },
+  "type": "module"
 }
