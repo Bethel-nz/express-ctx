@@ -1,5 +1,5 @@
 {
-  "name": "my-ctx",
+  "name": "@bethel-nz/express-ctx",
   "version": "1.0.0",
   "description": "A flexible context management library for Express applications",
   "main": "dist/index.js",
