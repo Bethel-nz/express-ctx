@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeAll, afterAll, vi } from 'vitest';
 import express from 'express';
 import request from 'supertest';
-import { contextMiddleware, getContext, MyContext } from '../src/index';
+import { contextMiddleware, getContext, MyContext } from '../index';
 import { AllowedValueTypes } from '../src/types';
 
 describe('Integration tests', () => {
