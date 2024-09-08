@@ -2,10 +2,17 @@ import { AllowedValueTypes, MyContextOptions } from './types';
 
 /**
  * MyContext class for managing context data with hooks and optional configurations.
+ * This class is used internally by the contextMiddleware.
  *
  * @example
- * // Create a new context with default values and configurations
- * const ctx = new MyContext({
+ * // Import and use the contextMiddleware in your Express app
+ * import express from 'express';
+ * import { contextMiddleware } from 'my-ctx';
+ *
+ * const app = express();
+ *
+ * // Use the middleware with optional configuration
+ * app.use(contextMiddleware({
  *   defaultValues: {
  *     userId: null,
  *     theme: 'light',
@@ -13,19 +20,28 @@ import { AllowedValueTypes, MyContextOptions } from './types';
  *     lastLogin: new Date()
  *   },
  *   expiry: 3600000, // 1 hour global expiry
+ * }));
+ *
+ * // Set values in a route
+ * app.use((req, res, next) => {
+ *   req.context.set('userId', '12345');
+ *   req.context.set('theme', 'dark');
+ *   req.context.set('sessionToken', 'abc123', 1800000); // 30 minutes TTL
+ *   next();
  * });
  *
- * // Set values
- * ctx.set('userId', '12345');
- * ctx.set('theme', 'dark');
- * ctx.set('sessionToken', 'abc123', 1800000); // 30 minutes TTL
+ * // Get values in another route
+ * app.get('/dashboard', (req, res) => {
+ *   const userId = req.context.get('userId'); // '12345'
+ *   const theme = req.context.get('theme'); // 'dark'
+ *   const features = req.context.get('features'); // ['dashboard', 'reports']
+ *   // ...
+ * });
  *
- * // Get values
- * const userId = ctx.get('userId'); // '12345'
- * const theme = ctx.get('theme'); // 'dark'
- * const features = ctx.get('features'); // ['dashboard', 'reports']
+ * // Add hooks (these should be set up in your main application file)
+ * import { getContext } from 'my-ctx';
  *
- * // Add hooks
+ * const ctx = getContext();
  * ctx.hook('beforeGet', (key) => {
  *   console.log(`Accessing key: ${key}`);
  * });
@@ -38,21 +54,40 @@ import { AllowedValueTypes, MyContextOptions } from './types';
  *   console.error('Context error:', error);
  * });
  *
- * // Clear specific keys
- * ctx.clear('sessionToken');
+ * // Using getContext() helper in utility functions
+ * function someHelperFunction() {
+ *   const ctx = getContext();
+ *   if (ctx) {
+ *     const userId = ctx.get('userId');
+ *     // Perform read-only operations with userId
+ *     // Note: ctx from getContext() should not be used to modify the context
+ *   }
+ * }
  *
- * // Clear all keys
- * ctx.clear();
- *
- * // Using with global expiry
- * const expiringCtx = new MyContext({
- *   expiry: 5000 // 5 seconds
+ * // Clear operations should only be performed in request handlers or middleware
+ * app.post('/logout', (req, res) => {
+ *   req.context.clear('sessionToken');
+ *   // Or clear all keys
+ *   req.context.clear();
+ *   res.send('Logged out');
  * });
  *
- * expiringCtx.set('tempKey', 'tempValue');
- * // After 5 seconds, tempKey will be automatically removed
+ * // Support for deeply nested objects and arrays
+ * req.context.set('preferences', {
+ *   theme: 'dark',
+ *   notifications: [true, false, true],
+ *   categories: ['work', 'personal', ['urgent', 'normal']],
+ *   settings: {
+ *     display: {
+ *       colors: ['red', 'green', 'blue'],
+ *       fonts: [{ name: 'Arial', size: 12 }, { name: 'Verdana', size: 10 }]
+ *     }
+ *   }
+ * });
+ *
+ * // Note: The middleware automatically handles session management and authorization key fallback.
+ * // It uses session IDs or falls back to authorization headers, and reuses existing context if a session is still active.
  */
-
 class MyContext<T extends Record<string, AllowedValueTypes>> {
   private storage: Map<string, { value: AllowedValueTypes; expiry?: number }>;
   private hooks: {
@@ -111,7 +146,7 @@ class MyContext<T extends Record<string, AllowedValueTypes>> {
       this.triggerHooks('onError', error);
     }
   }
-  // it should return either allowedValueTypes or undefined or Record<string, AllowedValueTypes>
+
   get<K extends keyof T>(key: K): T[K] | undefined {
     try {
       this.triggerHooks('beforeGet', key);

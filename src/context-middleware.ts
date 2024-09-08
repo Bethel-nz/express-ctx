@@ -1,7 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
 import { AsyncLocalStorage } from 'async_hooks';
 import MyContext from './ctx';
-import { AllowedValueTypes, MyContextOptions } from './types';
+import { AllowedValueTypes, AllowedValueTypesRecord, MyContextOptions } from './types';
 
 const asyncLocalStorage = new AsyncLocalStorage<MyContext<any>>();
 const contextStore = new Map<string, MyContext<any>>();
@@ -9,7 +9,7 @@ const contextStore = new Map<string, MyContext<any>>();
 declare global {
   namespace Express {
     interface Request {
-      context: MyContext<any>;
+      context: MyContext<AllowedValueTypesRecord>;
     }
   }
 }
@@ -28,7 +28,7 @@ interface ContextMiddlewareOptions<
  *
  * @example
  * import express from 'express';
- * import { contextMiddleware, MyContext } from 'my-express-context';
+ * import { contextMiddleware } from 'express-ctx';
  *
  * const app = express();
  *
@@ -80,6 +80,11 @@ interface ContextMiddlewareOptions<
  * app.listen(3000, () => {
  *   console.log('Server running on http://localhost:3000');
  * });
+ *
+ * @note The middleware automatically handles session management:
+ * - It uses 'x-session-id' header, falls back to 'authorization' header, or uses a default session ID.
+ * - It reuses existing context if a session is still active.
+ * - Each session has its own isolated context, ensuring data separation between users.
  */
 export const contextMiddleware = <T extends Record<string, AllowedValueTypes>>(
   options: ContextMiddlewareOptions<T> = {}
@@ -110,6 +115,7 @@ export { MyContext };
 
 /**
  * Helper function to get the current context within the request lifecycle.
+ * This function provides access to the context and its methods, including hooks.
  *
  * @returns The current MyContext instance or undefined if called outside the request lifecycle
  *
@@ -121,15 +127,34 @@ export { MyContext };
  *   if (ctx) {
  *     const userId = ctx.get('userId');
  *     // Do something with userId
+ *
+ *     // Using hooks
+ *     ctx.hook('beforeGet', (key) => {
+ *       console.log(`About to get ${key}`);
+ *     });
+ *
+ *     ctx.hook('afterSet', (key, value) => {
+ *       console.log(`Set ${key} to ${value}`);
+ *     });
+ *
+ *     ctx.hook('onClear', (key) => {
+ *       console.log(`Cleared ${key} from context`);
+ *     });
+ *
+ *     ctx.hook('onError', (error) => {
+ *       console.error('An error occurred:', error);
+ *     });
  *   }
  * }
  */
 export const getContext = <T extends Record<string, AllowedValueTypes>>(
   sessionId?: string
 ): MyContext<T> | undefined => {
-  const context = asyncLocalStorage.getStore() as MyContext<T> | undefined;
-  if (sessionId && contextStore.has(sessionId)) {
-    return contextStore.get(sessionId) as MyContext<T>;
+  let context = asyncLocalStorage.getStore() as MyContext<T> | undefined;
+
+  if (!context && sessionId && contextStore.has(sessionId)) {
+    context = contextStore.get(sessionId) as MyContext<T>;
   }
+
   return context;
 };
