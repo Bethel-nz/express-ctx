@@ -1,5 +1,5 @@
 {
-  "name": "@ren/express-ctx",
+  "name": "@bethel-nz/express-ctx",
   "version": "1.0.0",
   "description": "A flexible context management library for Express applications",
   "main": "dist/index.js",
@@ -22,16 +22,16 @@
     "request-scoped",
     "typescript"
   ],
-  "author": "Bethel-nz",
+  "author": "not_kylo_ren",
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/Bethel-nz/express-ctx.git"
+    "url": "https://github.com/not_kylo_ren/express-ctx.git"
   },
   "bugs": {
-    "url": "https://github.com/Bethel-nz/express-ctx/issues"
+    "url": "https://github.com/not_kylo_ren/express-ctx/issues"
   },
-  "homepage": "https://github.com/Bethel-nz/express-ctx#readme",
+  "homepage": "https://github.com/not_kylo_ren/express-ctx#readme",
   "peerDependencies": {
     "express": "^4.17.1"
   },

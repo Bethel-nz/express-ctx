@@ -23,7 +23,7 @@ A flexible Express middleware for managing context data across requests, allowin
 Install the package using npm:
 
 ```bash
-npm install express-ctx
+npm install @bethel-nz/express-ctx
 ```
 
 ## Usage
