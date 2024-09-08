@@ -1,29 +1,24 @@
 import express from 'express';
-import { MyContext, contextMiddleware } from '../index';
 
 const router = express.Router();
-const ctx = new MyContext();
 
-// Middleware to attach context to each request
-router.use(contextMiddleware());
-
-// Sign up route (POST /signup)
-router.post('/signup', (req, res) => {
-  const { username, email } = req.body;
-
-  // Store user details in context
-  req.context.set('user', { username, email });
-
-  res.status(201).json({
-    message: 'User signed up successfully',
-    user: { username, email },
-  });
+// Get initial data
+router.get('/data', (req, res) => {
+  const data = req.context.get('initialData');
+  res.json(data);
 });
 
-// Get user route (GET /user)
+// Update data
+router.put('/data', (req, res) => {
+  const currentData = req.context.get('initialData') || { count: 0 };
+  const newCount = currentData.count + 1;
+  req.context.set('initialData', { ...currentData, count: newCount });
+  res.json({ message: 'Data updated', data: req.context.get('initialData') });
+});
+
+// Get user data
 router.get('/user', (req, res) => {
   const user = req.context.get('user');
-
   if (user) {
     res.json({ user });
   } else {
@@ -31,19 +26,14 @@ router.get('/user', (req, res) => {
   }
 });
 
-// Update user route (PUT /user)
-router.put('/user', (req, res) => {
-  const currentUser = req.context?.get('user') || {};
+// Set user data
+router.post('/user', (req, res) => {
   const { username, email } = req.body;
-  const updatedUser = {
-    ...currentUser,
-    username: username || currentUser?.username,
-    email: email || currentUser?.email,
-  };
-
-  req.context.set('user', updatedUser);
-
-  res.json({ message: 'User updated successfully', user: updatedUser });
+  req.context.set('user', { username, email });
+  res.status(201).json({
+    message: 'User data set successfully',
+    user: { username, email },
+  });
 });
 
 export default router;
