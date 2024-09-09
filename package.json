@@ -11,7 +11,7 @@
     "prepublish": "npm run build",
     "pub": "tsc && npm publish --access public",
     "patch": "tsc && npm version patch && npm publish",
-    "example": "ts-node example/app.ts",
+    "example": "tsx ./examples/app.ts",
     "lint": "eslint . --ext .ts",
     "lint:fix": "eslint . --fix"
   },
@@ -22,16 +22,16 @@
     "request-scoped",
     "typescript"
   ],
-  "author": "not_kylo_ren",
+  "author": "Bethel-nz",
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/not_kylo_ren/express-ctx.git"
+    "url": "https://github.com/Bethel-nz/express-ctx.git"
   },
   "bugs": {
-    "url": "https://github.com/not_kylo_ren/express-ctx/issues"
+    "url": "https://github.com/Bethel-nz/express-ctx/issues"
   },
-  "homepage": "https://github.com/not_kylo_ren/express-ctx#readme",
+  "homepage": "https://github.com/Bethel-nz/express-ctx#readme",
   "peerDependencies": {
     "express": "^4.17.1"
   },
@@ -45,7 +45,8 @@
     "express": "^4.17.1",
     "supertest": "^6.3.4",
     "typescript": "^4.5.4",
-    "vitest": "^0.34.6"
+    "vitest": "^0.34.6",
+    "ts-node": "^10.9.2"
   },
   "files": [
     "dist",
@@ -55,5 +56,8 @@
   "engines": {
     "node": ">=14.0.0"
   },
-  "type": "module"
+  "type": "module",
+  "dependencies": {
+    "tsx": "^4.19.0"
+  }
 }
