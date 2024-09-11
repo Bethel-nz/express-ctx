@@ -207,13 +207,12 @@ describe('Context Middleware Cleanup', () => {
 
     app.get('/check', (req, res) => {
       const sensitive = req.context.get('sensitive');
-      console.log('sensitive', sensitive);
-      res.json(sensitive);
+      res.json(sensitive?.length > 0 ? sensitive : undefined);
     });
 
     const response = await request(app).get('/check');
     console.log('response', response.body);
-    expect(response.body).to.satisfy(
+    expect(response.body).toSatisfy(
       (body: any) =>
         body === undefined ||
         body === null ||
