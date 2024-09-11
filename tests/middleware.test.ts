@@ -88,6 +88,7 @@ describe('contextMiddleware', () => {
     const middleware = contextMiddleware();
     middleware(req as Request, res as Response, () => {
       expect(() =>
+        //eslint-disable-next-line
         req.context?.set('invalidKey', undefined as any)
       ).not.toThrow();
       expect(req.context?.get('invalidKey')).toBeUndefined();
@@ -207,7 +208,7 @@ describe('Context Middleware Cleanup', () => {
     app.get('/check', (req, res) => {
       const sensitive = req.context.get('sensitive');
       console.log('sensitive', sensitive);
-      res.json({ sensitive });
+      res.json(sensitive);
     });
 
     const response = await request(app).get('/check');

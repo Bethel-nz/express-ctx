@@ -38,6 +38,7 @@ class MyContext<T extends Record<string, AllowedValueTypes>> {
     if (this.hooks[event]) {
       for (const hook of this.hooks[event]) {
         try {
+          //eslint-disable-next-line
           (hook as (...args: any[]) => void)(...args);
         } catch (error) {
           console.error(`Error in ${event} hook:`, error);
