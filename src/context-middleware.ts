@@ -4,10 +4,13 @@ import MyContext from './ctx';
 import {
   AllowedValueTypes,
   AllowedValueTypesRecord,
-  MyContextOptions,
+  ContextMiddlewareOptions,
 } from './types';
+import { v4 as uuidv4 } from 'uuid';
 
-const asyncLocalStorage = new AsyncLocalStorage<MyContext<AllowedValueTypes>>();
+const asyncLocalStorage = new AsyncLocalStorage<
+  MyContext<AllowedValueTypesRecord>
+>();
 const contextStore = new Map<string, MyContext<AllowedValueTypesRecord>>();
 
 declare global {
@@ -18,12 +21,6 @@ declare global {
   }
 }
 
-interface ContextMiddlewareOptions<
-  T extends Record<string, AllowedValueTypes>
-> {
-  contextConfig?: MyContextOptions<T>;
-}
-
 /**
  * Express middleware for attaching a MyContext instance to each request.
  *
@@ -32,7 +29,7 @@ interface ContextMiddlewareOptions<
  *
  * @example
  * import express from 'express';
- * import { contextMiddleware } from 'express-ctx';
+ * import { contextMiddleware } from '@bethel-nz/express-ctx';
  *
  * const app = express();
  *
@@ -86,31 +83,30 @@ interface ContextMiddlewareOptions<
  * });
  *
  * @note The middleware automatically handles session management:
- * - It uses 'x-session-id' header, falls back to 'authorization' header, or uses a default session ID.
+ * -  uses a default uuid.
  * - It reuses existing context if a session is still active.
  * - Each session has its own isolated context, ensuring data separation between users.
  */
-export const contextMiddleware = <T extends Record<string, AllowedValueTypes>>(
-  options: ContextMiddlewareOptions<T> = {}
-) => {
-  const { contextConfig } = options;
-
+export const contextMiddleware = (options: ContextMiddlewareOptions = {}) => {
   return (req: Request, res: Response, next: NextFunction) => {
-    const sessionId =
-      (req.headers['x-session-id'] as string) ||
-      (req.headers.authorization as string) ||
-      'default-session';
-    if (!contextStore.has(sessionId)) {
-      contextStore.set(sessionId, new MyContext(contextConfig));
-    }
-    const context = contextStore.get(sessionId)!;
+    const contextId = uuidv4();
+    const context = new MyContext<AllowedValueTypesRecord>(options);
 
-    // Store the sessionId in the context
-    context.set('sessionId', sessionId);
+    contextStore.set(contextId, context);
+
+    // Store the contextId in the context
+    context.set('contextId', contextId);
 
     asyncLocalStorage.run(context, () => {
       req.context = context;
       next();
+    });
+
+    res.on('finish', () => {
+      asyncLocalStorage.exit(() => {
+        context.clear(contextId);
+        contextStore.delete(contextId);
+      });
     });
   };
 };
@@ -124,10 +120,10 @@ export { MyContext };
  * @returns The current MyContext instance or undefined if called outside the request lifecycle
  *
  * @example
- * import { getContext } from 'my-express-context';
+ * import { useContext } from '@bethel-nz/express-ctx';
  *
  * function someHelperFunction() {
- *   const ctx = getContext();
+ *   const ctx = useContext();
  *   if (ctx) {
  *     const userId = ctx.get('userId');
  *     // Do something with userId
@@ -151,14 +147,8 @@ export { MyContext };
  *   }
  * }
  */
-export const getContext = <T extends Record<string, AllowedValueTypes>>(
-  sessionId?: string
-): MyContext<T> | undefined => {
-  let context = asyncLocalStorage.getStore() as MyContext<T> | undefined;
-
-  if (!context && sessionId && contextStore.has(sessionId)) {
-    context = contextStore.get(sessionId) as MyContext<T>;
-  }
-
-  return context;
+export const useContext = <T extends Record<string, AllowedValueTypes>>():
+  | MyContext<T>
+  | undefined => {
+  return asyncLocalStorage.getStore() as MyContext<T> | undefined;
 };
