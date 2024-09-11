@@ -186,9 +186,9 @@ class MyContext<T extends Record<string, AllowedValueTypes>> {
     }
   }
 
-  clear(key?: keyof T | '*') {
+  clear(key: keyof T | '*') {
+    this.triggerHooks('onClear');
     if (key === '*') {
-      this.triggerHooks('onClear');
       this.storage.clear();
     } else {
       this.clearKey(String(key));
