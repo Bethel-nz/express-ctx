@@ -1,3 +1,3 @@
-import { contextMiddleware, getContext } from './src/context-middleware';
+import { contextMiddleware, useContext } from './src/context-middleware';
 
-export { contextMiddleware, getContext };
+export { contextMiddleware, useContext };
