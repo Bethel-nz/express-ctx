@@ -1,4 +1,4 @@
-import { AllowedValueTypes, MyContextOptions } from './types';
+import { AllowedValueTypes, ContextMiddlewareOptions } from './types';
 
 /**
  * MyContext class for managing context data with hooks and optional configurations.
@@ -7,7 +7,7 @@ import { AllowedValueTypes, MyContextOptions } from './types';
  * @example
  * // Import and use the contextMiddleware in your Express app
  * import express from 'express';
- * import { contextMiddleware } from 'my-ctx';
+ * import { contextMiddleware } from '@bethel-nz/express-ctx';
  *
  * const app = express();
  *
@@ -39,9 +39,9 @@ import { AllowedValueTypes, MyContextOptions } from './types';
  * });
  *
  * // Add hooks (these should be set up in your main application file)
- * import { getContext } from 'my-ctx';
+ * import { useContext } from 'my-ctx';
  *
- * const ctx = getContext();
+ * const ctx = useContext();
  * ctx.hook('beforeGet', (key) => {
  *   console.log(`Accessing key: ${key}`);
  * });
@@ -60,9 +60,9 @@ import { AllowedValueTypes, MyContextOptions } from './types';
  *   res.send('Logged out');
  * });
  *
- * // Using getContext() helper in utility functions
+ * // Using useContext() helper in utility functions
  * function someHelperFunction() {
- *   const ctx = getContext();
+ *   const ctx = useContext();
  *   if (ctx) {
  *     const userId = ctx.get('userId');
  *     // Perform operations with userId
@@ -100,7 +100,7 @@ import { AllowedValueTypes, MyContextOptions } from './types';
  * // It uses session IDs or falls back to authorization headers, and reuses existing context if a session is still active.
  */
 class MyContext<T extends Record<string, AllowedValueTypes>> {
-  private storage: Map<string, { value: AllowedValueTypes; expiry?: number }>;
+  private storage: Map<string, { value: AllowedValueTypes }>;
   private hooks: {
     beforeGet: ((key: string) => void)[];
     afterSet: ((key: string, value: AllowedValueTypes) => void)[];
@@ -108,10 +108,9 @@ class MyContext<T extends Record<string, AllowedValueTypes>> {
     onSet: ((key: string, value: AllowedValueTypes) => void)[];
     onError: ((error: Error) => void)[];
   };
-  private defaultValues: T;
-  private globalExpiry?: number;
+  private defaultValues: Partial<T>;
 
-  constructor(options: MyContextOptions<T> = {}) {
+  constructor(options: ContextMiddlewareOptions = {}) {
     this.storage = new Map();
     this.hooks = {
       beforeGet: [],
@@ -120,8 +119,7 @@ class MyContext<T extends Record<string, AllowedValueTypes>> {
       onSet: [],
       onError: [],
     };
-    this.defaultValues = options.defaultValues ?? ({} as T);
-    this.globalExpiry = options.expiry;
+    this.defaultValues = options as Partial<T>;
   }
 
   hook<E extends keyof typeof this.hooks>(
@@ -139,50 +137,46 @@ class MyContext<T extends Record<string, AllowedValueTypes>> {
     if (this.hooks[event]) {
       for (const hook of this.hooks[event]) {
         try {
-          //eslint-disable-next-line
           (hook as (...args: any[]) => void)(...args);
         } catch (error) {
-           
           console.error(`Error in ${event} hook:`, error);
-          this.triggerHooks(
-            'onError',
-            error instanceof Error ? error : new Error(String(error))
-          );
+          if (event !== 'onError') {
+            this.triggerHooks(
+              'onError',
+              error instanceof Error ? error : new Error(String(error))
+            );
+          }
         }
       }
     }
   }
 
-  set(key: string | symbol, value: AllowedValueTypes, ttl?: number) {
+  set<K extends keyof T>(key: K, value: T[K]) {
     try {
-      if (!value) return;
-      const expiry = ttl ?? this.globalExpiry;
-      const stringKey = key.toString();
-      this.storage.set(stringKey, { value, expiry });
-      this.triggerHooks('afterSet', stringKey, value);
-      this.triggerHooks('onSet', stringKey, value);
-      if (expiry) {
-        setTimeout(() => {
-          this.clearKey(stringKey);
-        }, expiry);
-      }
-      //eslint-disable-next-line
-    } catch (error: any | Error) {
-      this.triggerHooks('onError', error);
+      if (value === undefined) return;
+      const stringKey = String(key);
+      this.storage.set(stringKey, { value: value as AllowedValueTypes });
+      this.triggerHooks('afterSet', stringKey, value as AllowedValueTypes);
+      this.triggerHooks('onSet', stringKey, value as AllowedValueTypes);
+    } catch (error) {
+      this.triggerHooks(
+        'onError',
+        error instanceof Error ? error : new Error(String(error))
+      );
     }
   }
 
   get<K extends keyof T>(key: K): T[K] | undefined {
     try {
-      this.triggerHooks('beforeGet', key as string);
-      const item = this.storage.get(key.toString());
+      this.triggerHooks('beforeGet', String(key));
+      const item = this.storage.get(String(key));
       if (item) {
         return item.value as T[K];
       }
       if (key in this.defaultValues) {
         return this.defaultValues[key];
       }
-      throw new Error(`Key "${String(key)}" not found in context`);
+      return undefined;
     } catch (error) {
       this.triggerHooks(
         'onError',
@@ -192,19 +186,19 @@ class MyContext<T extends Record<string, AllowedValueTypes>> {
     }
   }
 
-  clear(key?: string | symbol | '*') {
-    if (key === '*' || key === undefined) {
+  clear(key?: keyof T | '*') {
+    if (key === '*') {
       this.triggerHooks('onClear');
       this.storage.clear();
     } else {
-      this.clearKey(key);
+      this.clearKey(String(key));
     }
   }
 
-  private clearKey(key: string | symbol) {
-    if (this.storage.has(key.toString())) {
-      this.storage.delete(key.toString());
-      this.triggerHooks('onClear', key as string);
+  private clearKey(key: string) {
+    if (this.storage.has(key)) {
+      this.storage.delete(key);
+      this.triggerHooks('onClear', key);
     }
   }
 }
