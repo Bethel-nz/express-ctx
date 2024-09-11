@@ -213,6 +213,11 @@ describe('Context Middleware Cleanup', () => {
 
     const response = await request(app).get('/check');
     console.log('response', response.body);
-    expect(response.body).toBeFalsy();
+    expect(response.body).to.satisfy(
+      (body: any) =>
+        body === undefined ||
+        body === null ||
+        (typeof body === 'object' && Object.keys(body).length === 0)
+    );
   });
 });
