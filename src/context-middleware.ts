@@ -34,14 +34,9 @@ declare global {
  * const app = express();
  *
  * app.use(contextMiddleware({
- *   contextConfig: {
- *     defaultValues: {
  *       appName: 'MyApp',
  *       version: '1.0.0',
  *       environment: process.env.NODE_ENV
- *     },
- *     expiry: 3600000, // 1 hour global expiry
- *   },
  * }));
  *
  * // Middleware to set user info in context (e.g., after authentication)
