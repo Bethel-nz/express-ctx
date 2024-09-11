@@ -7,7 +7,8 @@ export type AllowedObject = Record<string, baseType>;
 
 export type AllowedValueTypesRecord = Record<string, AllowedValueTypes>;
 
-export interface MyContextOptions<T extends AllowedValueTypesRecord> {
-  expiry?: number;
-  defaultValues?: T;
-}
+export type ContextMiddlewareOptions = Record<string, AllowedValueTypes>;
+
+export type InferedContext<T extends Record<string, AllowedValueTypes>> = {
+  [K in keyof T]: T[K];
+};
