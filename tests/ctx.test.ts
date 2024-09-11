@@ -3,13 +3,13 @@ import MyContext from '../src/ctx';
 
 describe('MyContext', () => {
   it('should set and get values', () => {
-    const ctx = new MyContext();
+    const ctx = new MyContext<{ key: string }>();
     ctx.set('key', 'value');
     expect(ctx.get('key')).toBe('value');
   });
 
   it('should use default values', () => {
-    const ctx = new MyContext({ defaultValues: { key: 'default' } });
+    const ctx = new MyContext({ key: 'default' });
     expect(ctx.get('key')).toBe('default');
   });
 
@@ -31,13 +31,14 @@ describe('MyContext', () => {
   it('should clear storage', () => {
     const ctx = new MyContext();
     ctx.set('key', 'value');
-    ctx.clear();
+    ctx.clear('key');
+    console.log(ctx.get('key'));
     expect(ctx.get('key')).toBeUndefined();
   });
 
   it('should handle default values', () => {
     const ctx = new MyContext<{ key1: string; key2?: string }>({
-      defaultValues: { key1: 'value1' },
+      key1: 'value1',
     });
     expect(ctx.get('key1')).toBe('value1');
     expect(ctx.get('key2')).toBeUndefined();
@@ -48,7 +49,7 @@ describe('MyContext', () => {
 
   it('should allow setting and getting new keys', () => {
     const ctx = new MyContext<Record<string, string>>({
-      defaultValues: { key1: 'value1' },
+      key1: 'value1',
     });
     expect(() => ctx.set('key2', 'value2')).not.toThrow();
     expect(ctx.get('key1')).toBe('value1');

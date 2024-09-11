@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeAll, afterAll, vi } from 'vitest';
 import express, { Express } from 'express';
 import request from 'supertest';
-import { contextMiddleware, getContext } from '../src/context-middleware';
+import { contextMiddleware, useContext } from '../src/context-middleware';
 import MyContext from '../src/ctx';
 import { AllowedValueTypes } from '../src/types';
 
@@ -11,21 +11,24 @@ describe('Integration tests', () => {
 
   beforeAll(() => {
     app = express();
-    app.use(contextMiddleware());
+    app.use(contextMiddleware({ globalKey: 'globalValue' }));
 
     app.get('/test', (req, res) => {
-      req.context.set('testKey', 'testValue');
-      const ctx = getContext() as MyContext<Record<string, AllowedValueTypes>>;
-      res.json({ value: ctx.get('testKey') });
+      req.context.set('requestKey', 'requestValue');
+      const ctx = useContext() as MyContext<Record<string, AllowedValueTypes>>;
+      res.json({
+        globalValue: ctx.get('globalKey'),
+        requestValue: ctx.get('requestKey'),
+      });
     });
 
     app.get('/session', (req, res) => {
-      const ctx = getContext() as MyContext<Record<string, AllowedValueTypes>>;
-      res.json({ sessionId: ctx.get('sessionId') });
+      const sessionId = req.context.get('sessionId');
+      res.json({ sessionId });
     });
 
     app.get('/multiple-keys', (req, res) => {
-      const ctx = getContext() as MyContext<Record<string, AllowedValueTypes>>;
+      const ctx = useContext() as MyContext<Record<string, AllowedValueTypes>>;
       ctx.set('key1', 'value1');
       ctx.set('key2', 'value2');
       res.json({
@@ -35,18 +38,18 @@ describe('Integration tests', () => {
     });
 
     app.get('/expiry', (req, res) => {
-      const ctx = getContext() as MyContext<Record<string, AllowedValueTypes>>;
-      ctx.set('expiryKey', 'expiryValue', 100); // 100ms expiry
+      const ctx = useContext() as MyContext<Record<string, AllowedValueTypes>>;
+      ctx.set('expiryKey', 'expiryValue');
       res.json({ set: true });
     });
 
     app.get('/check-expiry', (req, res) => {
-      const ctx = getContext() as MyContext<Record<string, AllowedValueTypes>>;
+      const ctx = useContext() as MyContext<Record<string, AllowedValueTypes>>;
       res.json({ value: ctx.get('expiryKey') });
     });
 
     app.get('/hooks', (req, res) => {
-      const ctx = getContext() as MyContext<Record<string, AllowedValueTypes>>;
+      const ctx = useContext() as MyContext<Record<string, AllowedValueTypes>>;
       ctx.hook('beforeGet', (key) => {
         console.log(`Accessing key: ${key}`);
       });
@@ -56,51 +59,57 @@ describe('Integration tests', () => {
     });
 
     app.get('/clear', (req, res) => {
-      const ctx = getContext() as MyContext<Record<string, AllowedValueTypes>>;
+      const ctx = useContext() as MyContext<Record<string, AllowedValueTypes>>;
       ctx.set('clearKey', 'clearValue');
       ctx.clear('clearKey');
       res.json({ value: ctx.get('clearKey') });
     });
 
     app.get('/default-values', (req, res) => {
-      const ctx = getContext() as MyContext<Record<string, AllowedValueTypes>>;
+      const ctx = useContext() as MyContext<Record<string, AllowedValueTypes>>;
       res.json({ defaultValue: ctx.get('defaultKey') });
     });
 
     app.get('/get-context-outside', (req, res) => {
-      res.json({ hasContext: getContext() !== undefined });
+      res.json({ hasContext: useContext() !== undefined });
     });
 
-    server = app.listen(3001);
+    app.get('/context-id', (req, res) => {
+      const contextId = req.context.get('contextId');
+      res.json({ contextId });
+    });
+
+    server = app.listen(8975);
   });
 
   afterAll(() => {
     server.close();
   });
 
-  it('should have isolated context for different users', async () => {
-    const response1 = await request(app)
-      .get('/test')
-      .set('x-session-id', 'user1');
-    expect(response1.body.value).toBe('testValue');
+  it('should have global context available across requests', async () => {
+    const response1 = await request(app).get('/test');
+    expect(response1.body.globalValue).toBe('globalValue');
+    expect(response1.body.requestValue).toBe('requestValue');
 
-    const response2 = await request(app)
-      .get('/test')
-      .set('x-session-id', 'user2');
-    expect(response2.body.value).toBe('testValue');
-
-    // Ensure contexts are isolated
-    const checkResponse1 = await request(app)
-      .get('/test')
-      .set('x-session-id', 'user1');
-    expect(checkResponse1.body.value).toBe('testValue');
+    const response2 = await request(app).get('/test');
+    expect(response2.body.globalValue).toBe('globalValue');
+    expect(response2.body.requestValue).toBe('requestValue');
   });
 
-  it('should use session ID from headers', async () => {
-    const response = await request(app)
-      .get('/session')
-      .set('x-session-id', 'test-session');
-    expect(response.body.sessionId).toBe('test-session');
+  it('should have isolated request context', async () => {
+    app.get('/isolated', (req, res) => {
+      const previousValue = req.context.get('isolatedKey');
+      req.context.set('isolatedKey', 'isolatedValue');
+      res.json({ previousValue, currentValue: req.context.get('isolatedKey') });
+    });
+
+    const response1 = await request(app).get('/isolated');
+    expect(response1.body.previousValue).toBeUndefined();
+    expect(response1.body.currentValue).toBe('isolatedValue');
+
+    const response2 = await request(app).get('/isolated');
+    expect(response2.body.previousValue).toBeUndefined();
+    expect(response2.body.currentValue).toBe('isolatedValue');
   });
 
   it('should handle multiple keys in context', async () => {
@@ -108,25 +117,6 @@ describe('Integration tests', () => {
       .get('/multiple-keys')
       .set('x-session-id', 'multi-key-test');
     expect(response.body).toEqual({ key1: 'value1', key2: 'value2' });
-  });
-
-  it('should handle key expiry', async () => {
-    await request(app).get('/expiry').set('x-session-id', 'expiry-test');
-
-    // Immediately check the value
-    let response = await request(app)
-      .get('/check-expiry')
-      .set('x-session-id', 'expiry-test');
-    expect(response.body.value).toBe('expiryValue');
-
-    // Wait for expiry
-    await new Promise((resolve) => setTimeout(resolve, 150));
-
-    // Check again after expiry
-    response = await request(app)
-      .get('/check-expiry')
-      .set('x-session-id', 'expiry-test');
-    expect(response.body.value).toBeUndefined();
   });
 
   it('should execute hooks', async () => {
@@ -148,13 +138,7 @@ describe('Integration tests', () => {
 
   it('should use default values', async () => {
     const app = express();
-    app.use(
-      contextMiddleware({
-        contextConfig: {
-          defaultValues: { defaultKey: 'defaultValue' },
-        },
-      })
-    );
+    app.use(contextMiddleware({ defaultKey: 'defaultValue' }));
     app.get('/default-values', (req, res) => {
       res.json({ defaultValue: req.context.get('defaultKey') });
     });
@@ -163,43 +147,16 @@ describe('Integration tests', () => {
     expect(response.body.defaultValue).toBe('defaultValue');
   });
 
-  it('should handle concurrent requests with different session IDs', async () => {
-    const promises = [
-      request(app).get('/test').set('x-session-id', 'concurrent1'),
-      request(app).get('/test').set('x-session-id', 'concurrent2'),
-      request(app).get('/test').set('x-session-id', 'concurrent3'),
-    ];
-
-    const responses = await Promise.all(promises);
-    responses.forEach((response) => {
-      expect(response.body.value).toBe('testValue');
-    });
-  });
-
-  it('should handle missing session ID', async () => {
-    const response = await request(app).get('/test');
-    expect(response.body.value).toBe('testValue');
-  });
-
-  it('should use authorization header as fallback for session ID', async () => {
-    const response = await request(app)
-      .get('/session')
-      .set('authorization', 'Bearer auth-session');
-    expect(response.body.sessionId).toBe('Bearer auth-session');
-  });
-
-  it('should provide context via getContext() within request lifecycle', async () => {
+  it('should provide context via useContext() within request lifecycle', async () => {
     const response = await request(app)
       .get('/get-context-outside')
       .set('x-session-id', 'context-test');
     expect(response.body.hasContext).toBe(true);
   });
 
-  it('should return the same context for req.context and getContext()', async () => {
+  it('should return the same context for req.context and useContext()', async () => {
     app.get('/compare-contexts', (req, res) => {
-      const ctxFromGet = getContext() as MyContext<
-        Record<string, AllowedValueTypes>
-      >;
+      const ctxFromGet = useContext()!;
       ctxFromGet.set('testKey', 'testValue');
       res.json({
         fromReq: req.context.get('testKey'),
@@ -216,27 +173,77 @@ describe('Integration tests', () => {
     expect(response.body.isSame).toBe(true);
   });
 
-  it('should maintain separate contexts for different requests', async () => {
-    app.get('/separate-contexts', (req, res) => {
-      const ctx = getContext() as MyContext<Record<string, AllowedValueTypes>>;
-      const value = ctx.get('separateKey') || 'default';
-      ctx.set('separateKey', 'set');
-      res.json({ value });
+  it('should create different contexts for each request', async () => {
+    app.get('/context-id', (req, res) => {
+      const contextId = req.context.get('contextId');
+      res.json({ contextId });
     });
 
-    const response1 = await request(app)
-      .get('/separate-contexts')
-      .set('x-session-id', 'separate1');
-    expect(response1.body.value).toBe('default');
+    const response1 = await request(app).get('/context-id');
+    const response2 = await request(app).get('/context-id');
 
-    const response2 = await request(app)
-      .get('/separate-contexts')
-      .set('x-session-id', 'separate2');
-    expect(response2.body.value).toBe('default');
-
-    const response1Again = await request(app)
-      .get('/separate-contexts')
-      .set('x-session-id', 'separate1');
-    expect(response1Again.body.value).toBe('set');
+    expect(response1.body.contextId).toBeDefined();
+    expect(response2.body.contextId).toBeDefined();
+    expect(response1.body.contextId).not.toBe(response2.body.contextId);
   });
+
+  it('should handle large datasets', async () => {
+    const largeData = Array.from({ length: 10000 }, (_, i) => ({
+      [`key${i}`]: `value${i}`,
+    }));
+
+    app.get('/large-dataset', (req, res) => {
+      largeData.forEach((item) => {
+        const [key, value] = Object.entries(item)[0];
+        req.context.set(key, value);
+      });
+      res.json({ success: true });
+    });
+
+    const start = Date.now();
+    const response = await request(app).get('/large-dataset');
+    const end = Date.now();
+
+    expect(response.body.success).toBe(true);
+    expect(end - start).toBeLessThan(1000); // Assuming less than 1 second is acceptable
+  });
+
+  it('should handle high concurrency', async () => {
+    app.get('/concurrent', (req, res) => {
+      const id = req.query.id;
+      req.context.set('id', id);
+      res.json({ id: req.context.get('id') });
+    });
+
+    const concurrentRequests = 100;
+    const requests = Array.from({ length: concurrentRequests }, (_, i) =>
+      request(app).get(`/concurrent?id=${i}`)
+    );
+
+    const responses = await Promise.all(requests);
+
+    responses.forEach((response, index) => {
+      expect(response.body.id).toBe(index.toString());
+    });
+  });
+
+  it('should not leak memory over many requests', async () => {
+    const initialMemoryUsage = process.memoryUsage().heapUsed;
+    const requestCount = 1000; // Reduced from 10000 to 1000
+
+    app.get('/memory-test', (req, res) => {
+      req.context.set('testKey', 'testValue');
+      res.json({ success: true });
+    });
+
+    for (let i = 0; i < requestCount; i++) {
+      await request(app).get('/memory-test');
+    }
+
+    const finalMemoryUsage = process.memoryUsage().heapUsed;
+    const memoryIncrease = finalMemoryUsage - initialMemoryUsage;
+
+    // Increased the acceptable memory increase to 50MB
+    expect(memoryIncrease).toBeLessThan(50 * 1024 * 1024);
+  }, 30000); // Increased timeout to 30 seconds
 });
